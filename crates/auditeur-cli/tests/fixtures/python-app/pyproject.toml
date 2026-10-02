@@ -1,0 +1,6 @@
+[project]
+name = "fixture-python"
+version = "0.1.0"
+description = "A tiny Python package used as an audit fixture."
+requires-python = ">=3.11"
+dependencies = ["requests>=2.31"]

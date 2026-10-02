@@ -1,0 +1,32 @@
+[audit]
+id = "code-quality"
+version = "1.0.0"
+title = "Code quality"
+description = "Markers of unfinished work, debug leftovers, and file size distribution."
+
+[[checks]]
+id = "todo-markers"
+title = "Unfinished-work markers in source"
+description = "Counts TODO, FIXME, HACK and XXX markers across text sources."
+kind = "deterministic"
+category = "code_quality"
+severity = "low"
+recommendation = "Track each marker as an issue, or remove it."
+
+[[checks]]
+id = "debug-prints"
+title = "Debug output left in source"
+description = "Looks for language-specific debug printing that is easy to leave behind."
+kind = "deterministic"
+category = "code_quality"
+severity = "low"
+recommendation = "Remove the debug statement or replace it with structured logging."
+
+[[checks]]
+id = "oversized-files"
+title = "Files larger than the maintainability threshold"
+description = "Reports text files above a line-count threshold, which are usually doing more than one job."
+kind = "deterministic"
+category = "maintainability"
+severity = "low"
+recommendation = "Split the file along its responsibilities."

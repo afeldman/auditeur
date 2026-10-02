@@ -1,0 +1,14 @@
+# Added by code-review-graph
+.code-review-graph/
+
+# Rust
+/target
+**/*.rs.bk
+
+# Auditeur local state (never part of the source tree)
+/auditeur-state/
+
+# OS / editor noise
+.DS_Store
+
+target/

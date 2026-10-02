@@ -1,0 +1,20 @@
+[package]
+name = "auditeur-logging"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Auditeur logging: one entry point, a size-rotated file, redacted"
+
+[dependencies]
+auditeur-config.workspace = true
+auditeur-model.workspace = true
+
+file-rotate.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

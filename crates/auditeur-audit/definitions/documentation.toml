@@ -1,0 +1,39 @@
+[audit]
+id = "documentation"
+version = "1.0.0"
+title = "Documentation"
+description = "Entry-point documentation and licence declaration."
+
+[[checks]]
+id = "readme-present"
+title = "Repository README present"
+description = "Checks for a README at the repository root."
+kind = "deterministic"
+category = "documentation"
+severity = "medium"
+recommendation = "Document what the project is, how to build it and how to run its tests."
+
+[[checks]]
+id = "license-present"
+title = "Licence declared"
+description = "Checks for a licence file or a licence field in a manifest."
+kind = "deterministic"
+category = "documentation"
+severity = "medium"
+recommendation = "Add a licence file; without one, the terms of use are undefined."
+
+[[checks]]
+id = "changelog-present"
+title = "Change log present"
+description = "Checks for a change log, which is what a release reviewer reads first."
+kind = "deterministic"
+category = "documentation"
+severity = "low"
+
+[[checks]]
+id = "documentation-coverage"
+title = "Documentation file coverage"
+description = "Counts documentation files relative to source files, as a coarse indicator."
+kind = "deterministic"
+category = "documentation"
+severity = "info"

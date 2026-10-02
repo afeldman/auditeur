@@ -1,0 +1,24 @@
+[package]
+name = "auditeur-audit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Auditeur audit engine: definitions, deterministic checks, pipeline"
+
+[dependencies]
+auditeur-config.workspace = true
+auditeur-inference.workspace = true
+auditeur-languages.workspace = true
+auditeur-model.workspace = true
+auditeur-repository.workspace = true
+
+chrono.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

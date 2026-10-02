@@ -1,0 +1,32 @@
+[audit]
+id = "security"
+version = "1.0.0"
+title = "Security"
+description = "Committed credentials, dangerous process execution, and a model-assisted review of security-relevant evidence."
+
+[[checks]]
+id = "committed-secrets"
+title = "Credentials committed to the repository"
+description = "Scans tracked text files for credential-shaped content: private key blocks, cloud access keys, bearer tokens and secret assignments."
+kind = "deterministic"
+category = "security"
+severity = "high"
+recommendation = "Remove the credential from the repository, rotate it, and read it from the environment instead."
+
+[[checks]]
+id = "dangerous-process-execution"
+title = "Dangerous process execution patterns"
+description = "Looks for shell interpretation of constructed strings, dynamic evaluation, and subprocess calls that pass a shell."
+kind = "deterministic"
+category = "security"
+severity = "medium"
+recommendation = "Pass argument arrays instead of shell strings, and remove dynamic evaluation where a parser would do."
+
+[[checks]]
+id = "ai-threat-review"
+title = "Model-assisted review of security evidence"
+description = "Asks the local model to interpret the evidence collected by the deterministic security checks."
+kind = "ai_assisted"
+category = "security"
+severity = "medium"
+objective = "Using only the supplied evidence, identify security-relevant weaknesses. Prefer filing nothing over filing a speculation. If a finding would rest on evidence not supplied, do not file it."

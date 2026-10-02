@@ -1,0 +1,31 @@
+[audit]
+id = "testing"
+version = "1.0.0"
+title = "Testing"
+description = "Whether the repository contains tests at all, and which runners it uses."
+
+[[checks]]
+id = "tests-present"
+title = "Automated tests present"
+description = "Fails when source files exist but no test file or inline test module was found."
+kind = "deterministic"
+category = "testing"
+severity = "high"
+recommendation = "Add tests for the smallest behaviour worth protecting, then grow the suite."
+
+[[checks]]
+id = "test-inventory"
+title = "Test inventory"
+description = "Records test files, counted test functions and detected runners per language."
+kind = "deterministic"
+category = "testing"
+severity = "info"
+
+[[checks]]
+id = "ai-test-gap-analysis"
+title = "Model-assisted review of test coverage gaps"
+description = "Asks the local model which untested behaviours the supplied evidence suggests."
+kind = "ai_assisted"
+category = "testing"
+severity = "low"
+objective = "Using only the supplied evidence, name the behaviours that appear untested. Cite the file ranges you rely on. If the evidence does not show a clear gap, file nothing."

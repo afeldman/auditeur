@@ -1,0 +1,31 @@
+[audit]
+id = "release-readiness"
+version = "1.0.0"
+title = "Release readiness"
+description = "Version declaration, repository state, and a model-assisted read of the release picture."
+
+[[checks]]
+id = "version-declared"
+title = "Version declared in a manifest"
+description = "Checks that at least one manifest declares a version, which a release must be able to point at."
+kind = "deterministic"
+category = "release_readiness"
+severity = "low"
+recommendation = "Declare the version in the manifest and tag the release."
+
+[[checks]]
+id = "git-working-tree-clean"
+title = "Working tree matches the recorded revision"
+description = "Records whether the audited tree has uncommitted changes, which means the audit does not describe any single commit."
+kind = "deterministic"
+category = "release_readiness"
+severity = "info"
+
+[[checks]]
+id = "ai-release-narrative"
+title = "Model-assisted release readiness narrative"
+description = "Asks the local model to summarise release risks from the supplied evidence."
+kind = "ai_assisted"
+category = "release_readiness"
+severity = "low"
+objective = "Using only the supplied evidence, summarise the risks that stand between this revision and a release. Cite the references you rely on and keep the findings to things the evidence supports."

@@ -1,0 +1,39 @@
+[audit]
+id = "configuration"
+version = "1.0.0"
+title = "Configuration"
+description = "Repository configuration hygiene: committed environment files, ignore rules, and environment handling."
+
+[[checks]]
+id = "committed-environment-file"
+title = "Environment file with credentials committed"
+description = "Detects committed .env-style files that are meant to hold local secrets."
+kind = "deterministic"
+category = "configuration"
+severity = "high"
+recommendation = "Commit an example file instead, ignore the real one, and rotate anything it contained."
+
+[[checks]]
+id = "ignore-file-present"
+title = "Version-control ignore rules present"
+description = "Checks for a top-level ignore file, which is what keeps build output and secrets out of the repository."
+kind = "deterministic"
+category = "configuration"
+severity = "info"
+
+[[checks]]
+id = "environment-configuration"
+title = "Environment and configuration files"
+description = "Records the configuration and infrastructure files that are present."
+kind = "deterministic"
+category = "configuration"
+severity = "info"
+
+[[checks]]
+id = "ai-configuration-review"
+title = "Model-assisted configuration review"
+description = "Asks the local model to interpret the supplied configuration evidence."
+kind = "ai_assisted"
+category = "configuration"
+severity = "low"
+objective = "Using only the supplied evidence, identify configuration values that are likely to be wrong in production, such as debug switches left on or overly permissive settings. Cite the references you rely on."

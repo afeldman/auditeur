@@ -1,0 +1,19 @@
+[package]
+name = "auditeur-tui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Auditeur terminal user interface: setup wizard and progress display"
+
+[dependencies]
+auditeur-audit.workspace = true
+auditeur-config.workspace = true
+auditeur-inference.workspace = true
+auditeur-model.workspace = true
+
+ratatui.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

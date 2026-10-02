@@ -1,0 +1,39 @@
+[audit]
+id = "architecture"
+version = "1.0.0"
+title = "Architecture and delivery"
+description = "Project layout, continuous integration configuration, and the shape of a multi-project repository."
+
+[[checks]]
+id = "ci-configuration-present"
+title = "Continuous integration configured"
+description = "Checks for a CI configuration at a well-known location."
+kind = "deterministic"
+category = "ci_cd"
+severity = "medium"
+recommendation = "Add a pipeline that builds and tests every change."
+
+[[checks]]
+id = "source-layout"
+title = "Source layout"
+description = "Records whether sources live in a conventional top-level directory."
+kind = "deterministic"
+category = "architecture"
+severity = "info"
+
+[[checks]]
+id = "multiple-project-manifests"
+title = "Multiple project manifests"
+description = "Reports repositories that contain several independent manifests, which changes how an audit should be scoped."
+kind = "deterministic"
+category = "architecture"
+severity = "info"
+
+[[checks]]
+id = "ai-architecture-review"
+title = "Model-assisted architecture review"
+description = "Asks the local model to interpret the structural evidence collected for this category."
+kind = "ai_assisted"
+category = "architecture"
+severity = "low"
+objective = "Using only the supplied evidence, describe structural risks such as unclear layer boundaries or duplicate responsibility. Cite the references you rely on and file nothing if the evidence is insufficient."

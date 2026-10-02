@@ -1,0 +1,31 @@
+[audit]
+id = "dependencies"
+version = "1.0.0"
+title = "Dependencies"
+description = "Declared dependency surface, pinning, and lockfile presence, derived from manifests already in the repository."
+
+[[checks]]
+id = "lockfile-present"
+title = "Resolved dependency lockfile present"
+description = "Checks for a lockfile next to a manifest that declares dependencies. Without one, builds are not reproducible."
+kind = "deterministic"
+category = "dependencies"
+severity = "medium"
+recommendation = "Commit the lockfile for applications, and for libraries document why it is absent."
+
+[[checks]]
+id = "unpinned-dependencies"
+title = "Dependencies without a version constraint"
+description = "Reports declarations that resolve to whatever is newest, or to a local path."
+kind = "deterministic"
+category = "dependencies"
+severity = "low"
+recommendation = "Pin a version range so that a build does not change underneath the team."
+
+[[checks]]
+id = "dependency-inventory"
+title = "Declared dependency inventory"
+description = "Records how many dependencies each language declares, and how many are development-only."
+kind = "deterministic"
+category = "dependencies"
+severity = "info"

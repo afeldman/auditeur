@@ -1,0 +1,64 @@
+[workspace]
+resolver = "2"
+# Members are added as each crate lands; the final list is the nine crates
+# documented in ARCHITECTURE.md section 3.
+members = [
+    "crates/auditeur-model",
+    "crates/auditeur-config",
+    "crates/auditeur-repository",
+    "crates/auditeur-languages",
+    "crates/auditeur-inference",
+    "crates/auditeur-audit",
+    "crates/auditeur-report",
+    "crates/auditeur-tui",
+    "crates/auditeur-cli",
+    "crates/auditeur-logging",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+authors = ["Auditeur contributors"]
+description = "Local evidence-driven software auditor"
+
+[workspace.dependencies]
+# internal
+auditeur-model = { path = "crates/auditeur-model" }
+auditeur-config = { path = "crates/auditeur-config" }
+auditeur-repository = { path = "crates/auditeur-repository" }
+auditeur-languages = { path = "crates/auditeur-languages" }
+auditeur-inference = { path = "crates/auditeur-inference" }
+auditeur-audit = { path = "crates/auditeur-audit" }
+auditeur-report = { path = "crates/auditeur-report" }
+auditeur-tui = { path = "crates/auditeur-tui" }
+auditeur-logging = { path = "crates/auditeur-logging" }
+
+# external
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+# Size-based rotation, not time-based: the contract is a byte limit and a file
+# count, and `tracing-appender` only rolls on a clock.
+file-rotate = "0.8"
+clap = { version = "4.5", features = ["derive", "wrap_help"] }
+crossterm = "0.29"
+dirs = "6"
+ratatui = "0.29"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tempfile = "3"
+thiserror = "2"
+toml = "0.8"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = "0.3"
+ureq = { version = "2.10", default-features = false, features = ["tls", "json"] }
+
+[profile.release]
+lto = "thin"
+strip = "debuginfo"
+
+[profile.test]
+opt-level = 0
