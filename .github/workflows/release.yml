@@ -1,0 +1,289 @@
+name: Release
+
+# Releases are cut from version tags: `git tag v0.1.0 && git push origin v0.1.0`.
+# The tag is the source of truth for the version and the workflow refuses to
+# publish if it disagrees with the Cargo package version.
+#
+# `workflow_dispatch` exists only to rehearse the pipeline before a real tag
+# exists. A manual run still has to be on a version tag, still runs every quality
+# gate, and packages everything; it publishes nothing unless it is dispatched
+# with `dry_run: false`.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build, test and package, but do not create a GitHub release'
+        type: boolean
+        default: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Least privilege at the workflow level. Only the job that creates the release
+# widens it, and only to `contents: write`.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  # A partly published release is worse than a late one.
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-gates
+
+      # The release cannot be built or packaged without these, and inventing them
+      # in CI would put files into a release that no human ever reviewed.
+      - name: Release preconditions
+        run: |
+          missing=0
+          for file in Cargo.lock LICENSE NOTICE; do
+            if [ ! -f "$file" ]; then
+              echo "::error file=$file::$file is missing. The release is blocked until it exists in the repository. The archives must carry LICENSE and NOTICE, and 'cargo build --locked' needs Cargo.lock."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Cargo.lock, LICENSE and NOTICE are present"
+
+      # The tag names the release; Cargo.toml names the code. If they disagree the
+      # release would be mislabelled, so it is refused rather than reconciled.
+      - name: Check the tag against the Cargo package version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref='${{ github.ref_name }}'
+          if [[ ! "$ref" =~ ^v[0-9] ]]; then
+            echo "::error::Ref '$ref' is not a version tag. Releases are cut from tags matching v* (for example v0.1.0)."
+            exit 1
+          fi
+
+          # The package that produces the `auditeur` binary, so the check does not
+          # hard-code a crate name.
+          metadata="$(cargo metadata --locked --no-deps --format-version 1)"
+          query='[.packages[] | select(any(.targets[]; .name == "auditeur")) | .version] | unique'
+          found="$(jq -r "${query} | length" <<<"$metadata")"
+          if [ "$found" -ne 1 ]; then
+            echo "::error::expected exactly one package producing the 'auditeur' binary, found $found"
+            jq -r "${query} | .[]" <<<"$metadata" | sed 's/^/  version: /'
+            exit 1
+          fi
+
+          tag_version="${ref#v}"
+          package_version="$(jq -r "${query} | .[0]" <<<"$metadata")"
+          if [ "$tag_version" != "$package_version" ]; then
+            echo "::error::tag '$ref' means version '$tag_version' but the package version is '$package_version'. Refusing to release; the workflow never edits Cargo.toml."
+            exit 1
+          fi
+
+          echo "tag $ref matches package version $package_version"
+          echo "tag=$ref" >> "$GITHUB_OUTPUT"
+          echo "version=$package_version" >> "$GITHUB_OUTPUT"
+
+      # A red gate must never reach a release, so the same four checks CI runs are
+      # run again here instead of trusting an earlier run.
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Check
+        run: cargo check --workspace --all-targets
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace
+
+  build:
+    name: build (${{ matrix.target }})
+    needs: quality
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      # One broken target must be visible, but the other targets are still worth
+      # building so that the failure can be diagnosed in one run.
+      fail-fast: false
+      matrix:
+        include:
+          # Targets with no cross-compilation linker and no native library beyond
+          # what the runner already provides. `aarch64-unknown-linux-gnu` needs a
+          # cross linker and is deliberately not built yet.
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: ''
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            ext: ''
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            ext: ''
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: '.exe'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Verify the built binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ matrix.target }}"
+          binary="target/${target}/release/auditeur${{ matrix.ext }}"
+          if [ ! -f "$binary" ]; then
+            echo "::error::$binary was not produced"
+            exit 1
+          fi
+          file "$binary" || true
+          host="$(uname -m)"
+          # A cross-compiled binary is built here but not executed here: running
+          # an x86_64 macOS binary on an arm64 runner would need Rosetta, which is
+          # not part of the toolchain this workflow declares.
+          case "$host/$target" in
+            arm64/aarch64-apple-darwin | x86_64/x86_64-apple-darwin | x86_64/x86_64-unknown-linux-gnu | */x86_64-pc-windows-msvc)
+              "$binary" --version
+              ;;
+            *)
+              echo "cross-compiled for $target on $host: built, not executed here"
+              ;;
+          esac
+
+      - name: Stage the binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p stage
+          cp "target/${{ matrix.target }}/release/auditeur${{ matrix.ext }}" stage/
+
+      - name: Upload the binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.target }}
+          path: stage/*
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    name: package and publish
+    needs: [quality, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.quality.outputs.tag }}
+      VERSION: ${{ needs.quality.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the built binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bin-*
+          path: bins
+
+      # A fixed timestamp makes the archives byte-identical for the same tag.
+      - name: Pin the archive timestamp
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+
+      - name: Package the release archives
+        run: |
+          python3 .github/scripts/release_artifacts.py package \
+            --tag "$TAG" \
+            --bins-dir bins \
+            --out-dir dist \
+            --repo-root .
+
+      # Independent of the packaging step: it re-reads dist/ from disk and checks
+      # the contents, the file modes, the checksums and the absence of local state.
+      - name: Verify the release archives
+        run: |
+          python3 .github/scripts/release_artifacts.py verify \
+            --tag "$TAG" \
+            --bins-dir bins \
+            --out-dir dist \
+            --repo-root . \
+            --github-annotations
+
+      - name: Compose the release notes
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 .github/scripts/release_notes.py \
+            --tag "$TAG" \
+            --version "$VERSION" \
+            --changelog CHANGELOG.md \
+            --dist-dir dist \
+            --repository "$GITHUB_REPOSITORY" \
+            --out release-notes.md
+
+      - name: Summarise the release
+        run: |
+          {
+            echo "## Auditeur $TAG"
+            echo
+            echo '```'
+            ls -l dist
+            echo
+            cat dist/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create the GitHub release
+        if: github.event_name == 'push' || inputs.dry_run == false
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          arguments=(--title "Auditeur $TAG" --notes-file release-notes.md --verify-tag)
+          case "$TAG" in
+            *-*) arguments+=(--prerelease) ;;
+          esac
+          gh release create "$TAG" "${arguments[@]}" dist/*.tar.gz dist/*.zip dist/SHA256SUMS
+
+      - name: Keep the packaged artifacts from a dry run
+        if: github.event_name != 'push' && inputs.dry_run != false
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: |
+            dist/*
+            release-notes.md
+          if-no-files-found: error
+          retention-days: 5
