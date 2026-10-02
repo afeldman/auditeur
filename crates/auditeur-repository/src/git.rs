@@ -339,6 +339,12 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
         run_git(root, &["init", "-q"]);
+        // Git's automatic maintenance runs after a commit and takes
+        // `.git/objects/maintenance.lock` while it does. It is still in flight
+        // when this test fingerprints the tree, and the check below would then
+        // report the end of that pass as a change the probe made.
+        run_git(root, &["config", "maintenance.auto", "false"]);
+        run_git(root, &["config", "gc.auto", "0"]);
         run_git(root, &["config", "user.email", "auditeur@example.com"]);
         run_git(root, &["config", "user.name", "Auditeur Test"]);
         std::fs::write(root.join("file.txt"), "content\n").unwrap();

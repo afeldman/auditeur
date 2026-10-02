@@ -214,20 +214,54 @@ pub const FIXTURES: &[(&str, &str)] = &[
     ("leaky-app", "python"),
 ];
 
-/// Copy a directory tree.
+/// Copy a directory tree, preserving modification times.
+///
+/// `fs::copy` copies the permission bits but not the modification time, and the
+/// platforms disagree about what the destination ends up with: on macOS the copy
+/// keeps the source's mtime, on Linux it is stamped with the current time. The
+/// repository fingerprint hashes `mtime_nanos`, so without this a sandbox would
+/// be metadata-identical to the fixture on one platform and not on the other,
+/// and any test comparing two sandboxes would pass on only one of them.
+///
+/// A directory's time is restored by its caller, after its contents have been
+/// written, because writing a child updates the parent's mtime.
 pub fn copy_tree(from: &Path, to: &Path) {
     fs::create_dir_all(to).expect("the destination directory");
     for entry in fs::read_dir(from).expect("the source directory") {
         let entry = entry.expect("a directory entry");
+        let source = entry.path();
         let target = to.join(entry.file_name());
         let file_type = entry.file_type().expect("the entry type");
         if file_type.is_dir() {
-            copy_tree(&entry.path(), &target);
+            copy_tree(&source, &target);
         } else if file_type.is_file() {
-            fs::copy(entry.path(), &target).expect("a copied file");
+            fs::copy(&source, &target).expect("a copied file");
+        } else {
+            // Symlinks are not followed: the fixtures do not contain any, and
+            // following them would make the sandbox able to escape its own tree.
+            continue;
         }
-        // Symlinks are not followed: the fixtures do not contain any, and
-        // following them would make the sandbox able to escape its own tree.
+        preserve_mtime(&source, &target);
+    }
+}
+
+/// Give `target` the modification time of `source`, so a copy is a copy.
+///
+/// Files are opened for writing first, because on Windows the file-time call
+/// needs write access; a directory cannot be opened that way on any platform, so
+/// it falls back to a read-only handle, which is all `futimens` needs on Unix.
+/// Where neither works the call is a no-op — on Windows the CLI suite is not run.
+fn preserve_mtime(source: &Path, target: &Path) {
+    let modified = match fs::metadata(source).and_then(|metadata| metadata.modified()) {
+        Ok(modified) => modified,
+        Err(_) => return,
+    };
+    let opened = fs::OpenOptions::new()
+        .write(true)
+        .open(target)
+        .or_else(|_| fs::File::open(target));
+    if let Ok(file) = opened {
+        let _ = file.set_modified(modified);
     }
 }
 
