@@ -39,6 +39,38 @@ Consequences of that principle:
 
 ## Installation
 
+### From a release
+
+Every tagged release publishes prebuilt archives. Pick the target that matches
+your machine — an archive is named `auditeur-<tag>-<target>.tar.gz`, or `.zip` on
+Windows:
+
+```
+x86_64-unknown-linux-gnu    Linux, x86-64
+aarch64-apple-darwin        macOS, Apple silicon
+x86_64-apple-darwin         macOS, Intel
+x86_64-pc-windows-msvc      Windows, x86-64 (zip)
+```
+
+```bash
+TAG=v0.1.0
+TARGET=aarch64-apple-darwin
+BASE=https://github.com/afeldman/auditeur/releases/download
+
+curl -fLO "$BASE/$TAG/auditeur-$TAG-$TARGET.tar.gz"
+curl -fLO "$BASE/$TAG/SHA256SUMS"
+sha256sum -c SHA256SUMS --ignore-missing     # macOS: shasum -a 256 -c SHA256SUMS
+tar -xzf "auditeur-$TAG-$TARGET.tar.gz"
+sudo install "auditeur-$TAG-$TARGET/auditeur" /usr/local/bin/auditeur
+```
+
+Each archive carries the binary (`auditeur`, or `auditeur.exe` on Windows),
+`README.md`, `LICENSE` and `NOTICE`. `auditeur --version` prints the release you
+are running; see [Releases and versioning](#releases-and-versioning) for how a
+release is cut.
+
+### From source
+
 Auditeur is an ordinary Cargo workspace:
 
 ```bash
@@ -190,6 +222,28 @@ backend: an OpenAI-compatible HTTP client, which covers LM Studio, Ollama,
 `llama.cpp --server`, vLLM and similar runtimes. In-process `llama.cpp`
 inference with compile-time CPU/Metal/CUDA features is the next iteration.
 
+The backend is configured in `~/auditeur/config/model.toml` — flat top-level
+keys, nothing else:
+
+```toml
+backend = "openai_compatible"      # "mock" is the offline deterministic double
+endpoint = "http://localhost:1234/v1"
+model = "qwen/qwen2.5-coder-14b"   # as the server reports it
+api_key_env = "AUDITEUR_API_KEY"   # optional; the key itself is never stored
+enabled = true
+request_timeout_secs = 120
+max_output_tokens = 2048
+temperature = 0.1                  # low: audit work rewards consistency
+```
+
+Each setting can be overridden for one process without touching the file —
+`AUDITEUR_MODEL_ENDPOINT`, `AUDITEUR_MODEL_NAME`, `AUDITEUR_MODEL_BACKEND`,
+`AUDITEUR_AI_ENABLED` — and `--no-ai` runs the deterministic audit whatever the
+configuration says. An unconfigured model is not an error: the audit still runs,
+and the run manifest records that AI-assisted analysis was skipped. `auditeur
+doctor` reports what is actually in effect, including unknown keys and
+unreachable endpoints.
+
 The audit workflow generates its own structured tasks. Repository content is
 passed to the model inside an explicitly fenced untrusted-data block, and model
 output must be schema-valid JSON whose evidence references are re-verified
@@ -248,13 +302,58 @@ Deliberately not there yet, and recorded rather than hidden:
   **in-process `llama.cpp`** with CPU/Metal/CUDA features are next, together
   with the roadmap in [DEVELOPMENT.md](DEVELOPMENT.md).
 
-## Documentation
+## Releases and versioning
 
-| Document | Contents |
-| --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Evidence-first model, crate boundaries, core traits, pipeline |
-| [DEVELOPMENT.md](DEVELOPMENT.md) | Build, test, conventions, extending Auditeur, roadmap |
-| [SECURITY.md](SECURITY.md) | Threat model, read-only boundary, prompt-injection defence |
+The Git tag is the version. `v0.1.0` in Git is `version = "0.1.0"` in
+`Cargo.toml` and the version `auditeur --version` prints; the release workflow
+refuses to publish if the tag and the package version disagree, so a release can
+never be mislabelled. Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
+and the notable changes of each release are recorded in [CHANGELOG.md](CHANGELOG.md).
+
+Cutting a release is one tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+GitHub Actions then does everything else, with no manual upload step:
+
+1. run `cargo fmt --all -- --check`, `cargo check --workspace --all-targets`,
+   `cargo clippy --workspace --all-targets -- -D warnings` and
+   `cargo test --workspace` — a red gate means no release;
+2. build each supported target with `cargo build --release --locked`;
+3. package one archive per target and a `SHA256SUMS` over them;
+4. create the GitHub release for the tag, with notes taken from the matching
+   `CHANGELOG.md` section and the archives attached.
+
+A release needs three files to be present in the repository, and the workflow
+fails with a named error rather than inventing any of them: `Cargo.lock` (the
+release build is `--locked`, so the dependency graph of a release is the one that
+was reviewed), and `LICENSE` and `NOTICE` (every archive must carry them).
+
+Archives are built deterministically — fixed timestamps, fixed file modes, one
+top-level directory per archive — so the same tag produces byte-identical
+archives. They contain the binary and `README.md`, `LICENSE` and `NOTICE`, and
+nothing else: Auditeur's local state under `~/auditeur` is never packaged.
+`aarch64-unknown-linux-gnu` is not built yet; it needs a cross linker that the
+other targets do not, so it is deliberately left out until that is set up.
+
+The packaging, verification and note-generation steps are plain Python with no
+dependencies, so a release can be rehearsed before a tag exists. Put the built
+binaries in `bins/bin-<target>/`, one directory per target, then:
+
+```bash
+python3 .github/scripts/release_artifacts.py package --tag v0.1.0 --bins-dir bins --out-dir dist
+python3 .github/scripts/release_artifacts.py verify  --tag v0.1.0 --bins-dir bins --out-dir dist
+python3 .github/scripts/release_notes.py --tag v0.1.0 --version 0.1.0 \
+  --dist-dir dist --repository afeldman/auditeur --out release-notes.md
+```
+
+`verify` re-reads `dist/` from disk and fails on any deviation: an unexpected or
+missing file, a member that does not match the file it was packaged from, a
+missing executable bit, a checksum that does not agree, or a member that looks
+like local Auditeur state.
 
 ## License
 
