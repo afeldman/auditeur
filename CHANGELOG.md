@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.3] - 2026-10-02
+## [0.1.4] - 2026-10-02
 
 A release-tooling release. No production code changed since `0.1.0`: the audit
 engine, the evidence model, the read-only boundary and the command-line surface
