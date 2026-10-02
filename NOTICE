@@ -1,0 +1,17 @@
+Auditeur
+Local Evidence-Driven Software Auditor
+https://github.com/afeldman/auditeur
+
+Copyright 2026 Auditeur contributors
+
+This product is licensed under the Apache License, Version 2.0 or the MIT
+License, at your option. Both licence texts are reproduced in LICENSE.
+
+Third-party components
+----------------------
+
+Auditeur's binary statically links the crates recorded in Cargo.lock. Each of
+those crates is distributed under its own licence, and Cargo.lock is the
+authoritative inventory of what a given release contains. A generated
+attribution file enumerating those components is not part of this release yet;
+until it is, this notice deliberately claims no more than the above.

@@ -39,7 +39,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::env;
-use crate::error::{echo_safe, ConfigError};
+use crate::error::ConfigError;
 
 /// Name of the state directory inside the user's home.
 pub const HOME_DIR_NAME: &str = "auditeur";

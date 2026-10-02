@@ -589,6 +589,11 @@ mod tests {
     /// The portability rule: a saved configuration names directories relative to
     /// the home, never absolute paths, so the home can be moved, restored from a
     /// backup, or shared between machines.
+    ///
+    /// Directories Auditeur owns are relative to the home; the path of the
+    /// repository being audited is not, because it is the user's own. An absolute
+    /// `models_dir` never reaches a file at all: `ModelConfig::validate` refuses
+    /// it, so it is invalid input rather than something to be saved.
     #[test]
     fn a_saved_configuration_contains_no_absolute_path() {
         let (temp, home) = temp_home();
@@ -596,10 +601,11 @@ mod tests {
         config.project.name = "demo".to_string();
         config.project.source_path = temp.path().join("repo");
         config.project.project_root = Some(home.root().to_path_buf());
-        config.model.models_dir = Some(PathBuf::from("/Volumes/big/models"));
+        config.model.models_dir = Some(PathBuf::from("artefacts"));
 
         config.save(&home).unwrap();
         let project = fs::read_to_string(home.project_config_file()).unwrap();
+        let model = fs::read_to_string(home.model_config_file()).unwrap();
 
         // The resolved state root is in memory, never in the file.
         assert!(
@@ -622,6 +628,14 @@ mod tests {
                 }
             }
         }
+
+        // The one directory setting outside `[paths]` lives in the model file and
+        // obeys the same rule.
+        assert!(
+            model.contains("models_dir = \"artefacts\""),
+            "the model directory must be saved relative to the home: {model}"
+        );
+
         assert!(project.contains("[paths]"), "{project}");
         assert!(project.contains("[logging]"), "{project}");
     }

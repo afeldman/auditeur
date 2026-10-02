@@ -136,6 +136,19 @@ pub enum Command {
 }
 
 impl Cli {
+    /// The repository named on the command line, if the user named one.
+    ///
+    /// Both positional forms count: `auditeur [PATH]` and the explicit
+    /// `auditeur audit <PATH>`. `None` means the target came from the
+    /// configuration or from the working directory, which is what decides
+    /// whether a configured `source_path` is honoured.
+    pub fn command_path(&self) -> Option<&PathBuf> {
+        match &self.command {
+            Some(Command::Audit { path }) => path.as_ref().or(self.path.as_ref()),
+            _ => self.path.as_ref(),
+        }
+    }
+
     /// The failure threshold as a typed value.
     pub fn fail_threshold(&self) -> Result<Severity, String> {
         parse_severity(&self.fail_on)

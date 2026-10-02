@@ -8,6 +8,7 @@
 # Release packaging output. The archives and checksums belong to the GitHub
 # release, never to the repository.
 /dist/
+/bins/
 /release-notes.md
 
 # Auditeur local state (never part of the source tree)

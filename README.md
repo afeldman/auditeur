@@ -357,4 +357,6 @@ like local Auditeur state.
 
 ## License
 
-MIT OR Apache-2.0.
+MIT OR Apache-2.0, at your option. Both licence texts are in [LICENSE](LICENSE);
+[NOTICE](NOTICE) carries the attribution. Every release archive contains a copy
+of both.

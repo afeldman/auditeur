@@ -73,7 +73,7 @@ pub fn resolve(cli: &Cli, target: &Path) -> Result<Resolved, CliError> {
     // directory, exactly as a bare invocation always has.
     let source_path = if cli.command_path().is_some() {
         target.to_path_buf()
-    } else if loaded.config.project.source_path != PathBuf::from(".") {
+    } else if loaded.config.project.source_path != Path::new(".") {
         loaded.config.project.source_path.clone()
     } else {
         target.to_path_buf()
@@ -156,14 +156,12 @@ pub fn resolve_home(
 
     if let Some(root) = pointer_root(source_path) {
         let home = AuditeurHome::from_path(root).map_err(CliError::Config)?;
-        return Ok((
-            home,
-            vec![format!(
-                "state root {} taken from the repository pointer file {}",
-                home.root().display(),
-                source_path.join(STATE_POINTER_FILE).display()
-            )],
-        ));
+        let note = format!(
+            "state root {} taken from the repository pointer file {}",
+            home.root().display(),
+            source_path.join(STATE_POINTER_FILE).display()
+        );
+        return Ok((home, vec![note]));
     }
 
     let discovery = AuditeurHome::discover().map_err(CliError::Config)?;
