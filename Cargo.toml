@@ -62,3 +62,29 @@ strip = "debuginfo"
 
 [profile.test]
 opt-level = 0
+
+# Release driver. `cargo release <version>` moves the version above, commits the
+# bump and creates the annotated tag that .github/workflows/release.yml triggers
+# on, so the tag and the package version cannot drift apart. Not a dependency:
+# install the tool once with `cargo install cargo-release --locked`.
+[workspace.metadata.release]
+# There is no root package. The version lives in [workspace.package] and every
+# member inherits it, so one bump has to move the whole workspace together.
+shared-version = true
+# Auditeur is an application; it is never published to a registry.
+publish = false
+# Exactly what the release workflow triggers on, and what it compares against.
+tag-name = "v{{version}}"
+tag-message = "Auditeur v{{version}}"
+# The repository signs every commit and tag. A release should not be the one
+# unsigned thing in the history.
+sign-commit = true
+sign-tag = true
+# Releasing is local: it writes the commit and the tag, and stops. Pushing is a
+# separate, deliberate act.
+push = false
+# One commit for the workspace rather than one per crate.
+consolidate-commits = true
+pre-release-commit-message = "release: prepare v{{version}}"
+# Releases are cut from main, which is the branch releases are tagged from.
+allow-branch = ["main"]

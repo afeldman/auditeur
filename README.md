@@ -310,22 +310,48 @@ refuses to publish if the tag and the package version disagree, so a release can
 never be mislabelled. Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
 and the notable changes of each release are recorded in [CHANGELOG.md](CHANGELOG.md).
 
-Cutting a release is one tag:
+### Cutting a release
+
+The version bump and the tag are one command, so the tag and the package version
+cannot drift apart. [`cargo-release`](https://github.com/crate-ci/cargo-release)
+is the driver; it is a tool, not a dependency:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+cargo install cargo-release --locked
+```
+
+Then, on `main` with a clean working tree and the changelog finalised:
+
+```bash
+cargo release <version>            # dry run: prints exactly what it would do
+cargo release <version> --execute  # bump, commit, signed tag — nothing pushed
+```
+
+It moves `version` in the workspace manifest, updates `Cargo.lock` with it,
+commits as `release: prepare v<version>`, and creates the signed annotated tag
+`v<version>`. Its configuration lives in `[workspace.metadata.release]` in
+`Cargo.toml`: `shared-version`, signed commit and tag, and `push = false` —
+releasing is local and pushing is a separate, deliberate act.
+
+```bash
+git push origin main
+git push origin v<version>
 ```
 
 GitHub Actions then does everything else, with no manual upload step:
 
-1. run `cargo fmt --all -- --check`, `cargo check --workspace --all-targets`,
+1. check that the tag and the package version agree, and that `Cargo.lock`,
+   `LICENSE` and `NOTICE` are present;
+2. run `cargo fmt --all -- --check`, `cargo check --workspace --all-targets`,
    `cargo clippy --workspace --all-targets -- -D warnings` and
    `cargo test --workspace` — a red gate means no release;
-2. build each supported target with `cargo build --release --locked`;
-3. package one archive per target and a `SHA256SUMS` over them;
-4. create the GitHub release for the tag, with notes taken from the matching
+3. build each supported target with `cargo build --release --locked`;
+4. package one archive per target and a `SHA256SUMS` over them;
+5. create the GitHub release for the tag, with notes taken from the matching
    `CHANGELOG.md` section and the archives attached.
+
+The tag is never moved afterwards. If a platform build fails, the fix is a new
+commit and a new release, not a rebuilt tag.
 
 A release needs three files to be present in the repository, and the workflow
 fails with a named error rather than inventing any of them: `Cargo.lock` (the
