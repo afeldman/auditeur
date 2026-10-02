@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-02
+
+A release-tooling release. No production code changed since `0.1.0`: the audit
+engine, the evidence model, the read-only boundary and the command-line surface
+are untouched. What follows is how a release is cut, and how the test suite
+behaves away from macOS.
+
+### Added
+
+- `cargo-release` as the release driver, configured in
+  `[workspace.metadata.release]`. One command moves the workspace version,
+  updates `Cargo.lock`, commits and creates the signed annotated tag, so the tag
+  and the version cannot drift apart. It is a tool rather than a dependency,
+  and it does not publish: the workflow only builds what was already tagged.
+
+### Changed
+
+- The release workflow validates the tag against the **shared workspace version**
+  read from `cargo metadata`, instead of one package's version, and refuses to
+  build when the workspace resolves to more than one version. The failure message
+  now names the cause and the remedy rather than reading as if the workflow
+  modified the manifest — it never does, and it still creates no commit and moves
+  no tag.
+
+### Fixed
+
+- Three test defects that made the suite pass on macOS and fail on Linux. None of
+  them was a product defect; in each case the test asserted a filesystem
+  behaviour rather than the property it was written for.
+  - The CLI test harness copied fixtures without their modification times. On
+    macOS `fs::copy` inherits the source's time, on Linux it does not, so two
+    sandboxes of the same fixture were metadata-identical on one platform and
+    not the other — and the test comparing the two command spellings compares
+    two sandboxes. The harness now restores the times it copied.
+  - The Git read-only probe test raced Git's own automatic maintenance, which
+    recent versions start after `git commit` and which briefly holds
+    `.git/objects/maintenance.lock`. The test then reported the end of that pass
+    as a change the probe had made. Probing itself writes nothing: run against
+    the six read-only Git invocations the probe performs, not one of the 40
+    entries under `.git` changes.
+  - The fingerprint test expected two consecutive writes to receive different
+    modification times. That is a property of the filesystem's timestamp
+    granularity, not of the fingerprint walk — it holds on APFS and usually does
+    not on Linux's coarse clock. The test now sets the new time explicitly, and
+    still asserts exactly what it asserted before.
+
+### Known limitations
+
+- **No GitHub release exists for any version yet.** The release pipeline has
+  never completed a full run: every attempt so far stopped in the quality gate,
+  and the platform archives have therefore never been built.
+- `v0.1.1` and `v0.1.2` are published tags whose commits still carry workspace
+  version `0.1.0`. They are left in place and cannot produce a release. The next
+  version that can be built is this one.
+
 ## [0.1.0] - 2026-10-02
 
 First release. Auditeur is a local, evidence-driven software auditor: it

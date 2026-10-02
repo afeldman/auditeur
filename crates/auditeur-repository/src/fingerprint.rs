@@ -412,9 +412,21 @@ mod tests {
             Some(auditeur_model::sha256_hex(b"aaaa").as_str())
         );
 
-        // Rewriting the file changes both fingerprints, because the walk
-        // records modification time as well as content.
+        // Rewriting the file changes both fingerprints, because the walk records
+        // modification time as well as content. The new time is set explicitly:
+        // two consecutive writes can land in the same filesystem timestamp tick
+        // — Linux reads a coarse clock, so on ext4 and overlayfs they usually do
+        // — and then nothing about the entry would have changed at all.
+        let first = std::fs::metadata(&file).unwrap().modified().unwrap();
+
         std::fs::write(&file, "bbbb").unwrap();
+
+        std::fs::File::options()
+            .write(true)
+            .open(&file)
+            .unwrap()
+            .set_modified(first + std::time::Duration::from_secs(1))
+            .unwrap();
         let after = fingerprint_tree(temp.path(), &FingerprintOptions::metadata_only()).unwrap();
         assert_ne!(metadata_only.fingerprint.digest, after.fingerprint.digest);
     }
