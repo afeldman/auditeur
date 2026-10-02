@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-audit"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-config",
  "auditeur-inference",
@@ -102,7 +102,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-cli"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-audit",
  "auditeur-config",
@@ -123,7 +123,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-config"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-model",
  "dirs",
@@ -135,7 +135,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-inference"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-config",
  "auditeur-model",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-languages"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-model",
  "auditeur-repository",
@@ -162,7 +162,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-logging"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-config",
  "auditeur-model",
@@ -176,7 +176,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-model"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "chrono",
  "regex",
@@ -188,7 +188,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-report"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-audit",
  "auditeur-config",
@@ -202,7 +202,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-repository"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-model",
  "serde",
@@ -213,7 +213,7 @@ dependencies = [
 
 [[package]]
 name = "auditeur-tui"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "auditeur-audit",
  "auditeur-config",
