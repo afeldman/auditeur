@@ -69,40 +69,48 @@ jobs:
           fi
           echo "Cargo.lock, LICENSE and NOTICE are present"
 
-      # The tag names the release; Cargo.toml names the code. If they disagree the
-      # release would be mislabelled, so it is refused rather than reconciled.
-      - name: Check the tag against the Cargo package version
+      # The tag names the release; Cargo.toml names the code. A release is cut
+      # locally with `cargo release`, which moves the workspace version and creates
+      # the tag in the same act — so in a healthy release they agree, and this step
+      # is what proves it. Nothing here is edited, committed or tagged: a
+      # disagreement means the tag was made without the bump, and such a release is
+      # cut again, not repaired from CI.
+      - name: Check the tag against the workspace version
         id: version
         shell: bash
         run: |
           set -euo pipefail
           ref='${{ github.ref_name }}'
           if [[ ! "$ref" =~ ^v[0-9] ]]; then
-            echo "::error::Ref '$ref' is not a version tag. Releases are cut from tags matching v* (for example v0.1.0)."
+            echo "::error::Ref '$ref' is not a version tag. Releases are cut from tags matching v* (for example v0.1.2)."
             exit 1
           fi
 
-          # The package that produces the `auditeur` binary, so the check does not
-          # hard-code a crate name.
+          # The shared version, read from Cargo rather than parsed out of the
+          # manifest. Every member inherits [workspace.package], so the workspace
+          # must resolve to exactly one version; `--no-deps` keeps the query to the
+          # members themselves.
           metadata="$(cargo metadata --locked --no-deps --format-version 1)"
-          query='[.packages[] | select(any(.targets[]; .name == "auditeur")) | .version] | unique'
-          found="$(jq -r "${query} | length" <<<"$metadata")"
-          if [ "$found" -ne 1 ]; then
-            echo "::error::expected exactly one package producing the 'auditeur' binary, found $found"
-            jq -r "${query} | .[]" <<<"$metadata" | sed 's/^/  version: /'
+          query='[.packages[].version] | unique'
+          count="$(jq -r "${query} | length" <<<"$metadata")"
+          if [ "$count" -ne 1 ]; then
+            echo "::error::the workspace resolves to $count distinct package versions; a release needs exactly one shared version"
+            jq -r '[.packages[] | "\(.version)  \(.name)"] | unique | .[]' <<<"$metadata" | sed 's/^/  /'
             exit 1
           fi
 
           tag_version="${ref#v}"
-          package_version="$(jq -r "${query} | .[0]" <<<"$metadata")"
-          if [ "$tag_version" != "$package_version" ]; then
-            echo "::error::tag '$ref' means version '$tag_version' but the package version is '$package_version'. Refusing to release; the workflow never edits Cargo.toml."
+          cargo_version="$(jq -r "${query} | .[0]" <<<"$metadata")"
+          echo "tag version  : $tag_version"
+          echo "cargo version: $cargo_version"
+          if [ "$tag_version" != "$cargo_version" ]; then
+            echo "::error::tag '$ref' names version '$tag_version' but the workspace version is '$cargo_version'. The tag was created without the matching version bump, so there is nothing to build. Cut the release again from a clean main with 'cargo release $tag_version --execute' and push the commit and the tag together. This workflow never edits the version, creates commits or moves tags."
             exit 1
           fi
 
-          echo "tag $ref matches package version $package_version"
+          echo "PASS: tag $ref matches the workspace version $cargo_version"
           echo "tag=$ref" >> "$GITHUB_OUTPUT"
-          echo "version=$package_version" >> "$GITHUB_OUTPUT"
+          echo "version=$cargo_version" >> "$GITHUB_OUTPUT"
 
       # A red gate must never reach a release, so the same four checks CI runs are
       # run again here instead of trusting an earlier run.
